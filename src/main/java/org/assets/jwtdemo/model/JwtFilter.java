@@ -2,6 +2,7 @@ package org.assets.jwtdemo.model;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
+import org.assets.jwtdemo.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
@@ -19,7 +21,7 @@ public class JwtFilter extends OncePerRequestFilter {
     private JwtUtil jwtUtil;
 
     @Autowired
-    private MyUserDetailsService userDetailsService;
+    private UserService userService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -31,18 +33,35 @@ public class JwtFilter extends OncePerRequestFilter {
 
         if (header != null && header.startsWith("Bearer ")) {
             token = header.substring(7);
-            username = jwtUtil.extractUsername(token);
+            // Check if token is blacklisted
+            if (jwtUtil.isBlacklisted(token)) {
+                chain.doFilter(request, response);
+                return;
+            }
+            try {
+                username = jwtUtil.extractUsername(token);
+            } catch (Exception e) {
+                // Token is invalid, continue without authentication
+            }
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            if (jwtUtil.validateToken(token, userDetails.getUsername())) {
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            try {
+                UserDetails userDetails = userService.loadUserByUsername(username);
+                if (jwtUtil.validateToken(token, userDetails.getUsername())) {
+                    // Extract authorities from JWT token
+                    List<org.springframework.security.core.authority.SimpleGrantedAuthority> authorities = 
+                        jwtUtil.extractAuthorities(token);
+                    
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
 
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+            } catch (Exception e) {
+                // User not found or other error, continue without authentication
             }
         }
 
