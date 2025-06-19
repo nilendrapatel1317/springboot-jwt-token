@@ -1,4 +1,4 @@
-package org.assets.jwtdemo.model;
+package org.assets.jwtdemo.utils;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;

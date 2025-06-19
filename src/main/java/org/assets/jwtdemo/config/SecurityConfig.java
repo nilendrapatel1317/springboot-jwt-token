@@ -1,6 +1,6 @@
-package org.assets.jwtdemo.model;
+package org.assets.jwtdemo.config;
 
-import org.assets.jwtdemo.service.UserService;
+import org.assets.jwtdemo.utils.JwtFilter;
 import org.springframework.context.annotation.*;
 import org.springframework.security.authentication.*;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;

@@ -1,4 +1,4 @@
-package org.assets.jwtdemo.model;
+package org.assets.jwtdemo.utils;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

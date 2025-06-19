@@ -1,4 +1,4 @@
-package org.assets.jwtdemo.security;
+package org.assets.jwtdemo.dao;
 
 public class AuthResponse {
     private String token;
