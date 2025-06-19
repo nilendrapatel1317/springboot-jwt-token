@@ -12,6 +12,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.assets.jwtdemo.dto.ApiResponse;
+import org.springframework.http.HttpStatus;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,6 +42,7 @@ public class AuthController {
             );
 
             // Blacklist all previous tokens for this user
+            System.out.println(authRequest.getUsername());
             jwtUtil.blacklistAllUserTokens(authRequest.getUsername());
 
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
@@ -49,9 +52,12 @@ public class AuthController {
             
             User user = userService.getUserByUsername(userDetails.getUsername());
             
-            return ResponseEntity.ok(new AuthResponse(token, user.getUsername(), user.getRole().name()));
+            return ResponseEntity.ok(
+                new ApiResponse<>(200, new AuthResponse(token, user.getUsername(), user.getRole().name()), "Login successful")
+            );
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new AuthResponse("Invalid username or password"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiResponse<>(401, null, "Invalid username or password"));
         }
     }
 
@@ -67,13 +73,16 @@ public class AuthController {
             // Generate JWT token for the newly registered user
             String token = jwtUtil.generateToken(user.getUsername(), user.getAuthorities());
             
-            return ResponseEntity.ok(new AuthResponse(token, user.getUsername(), user.getRole().name()));
+            return ResponseEntity.ok(
+                new ApiResponse<>(200, new AuthResponse(token, user.getUsername(), user.getRole().name()), "Registration successful")
+            );
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new AuthResponse(e.getMessage()));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(400, null, e.getMessage()));
         }
     }
 
-    @PostMapping("/logout")
+    @GetMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
@@ -81,9 +90,7 @@ public class AuthController {
             jwtUtil.addToBlacklist(token);
         }
         SecurityContextHolder.clearContext();
-        AuthResponse response = new AuthResponse();
-        response.setMessage("Logged out successfully");
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new ApiResponse<>(200, null, "Logged out successfully"));
     }
 
     @PostMapping("/change-password")
@@ -95,18 +102,14 @@ public class AuthController {
             boolean success = userService.changePassword(username, request.getCurrentPassword(), request.getNewPassword());
             
             if (success) {
-                AuthResponse response = new AuthResponse();
-                response.setMessage("Password changed successfully");
-                return ResponseEntity.ok(response);
+                return ResponseEntity.ok(new ApiResponse<>(200, null, "Password changed successfully"));
             } else {
-                AuthResponse response = new AuthResponse();
-                response.setMessage("Current password is incorrect");
-                return ResponseEntity.badRequest().body(response);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ApiResponse<>(400, null, "Current password is incorrect"));
             }
         } catch (Exception e) {
-            AuthResponse response = new AuthResponse();
-            response.setMessage("Error changing password");
-            return ResponseEntity.badRequest().body(response);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(400, null, "Error changing password"));
         }
     }
 
@@ -120,7 +123,7 @@ public class AuthController {
         response.put("username", username);
         response.put("authorities", authentication.getAuthorities());
         
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new ApiResponse<>(200, response, "Home info"));
     }
 
     @GetMapping("/user/profile")
@@ -137,7 +140,7 @@ public class AuthController {
         response.put("role", user.getRole().name());
         response.put("enabled", user.isEnabled());
         
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new ApiResponse<>(200, response, "User profile info"));
     }
 
     @GetMapping("/admin/dashboard")
@@ -146,7 +149,7 @@ public class AuthController {
         response.put("message", "Welcome to Admin Dashboard!");
         response.put("adminFeatures", "User management, System settings, Analytics");
         
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new ApiResponse<>(200, response, "Admin dashboard info"));
     }
 
     @GetMapping("/public/info")
@@ -156,6 +159,6 @@ public class AuthController {
         response.put("version", "1.0.0");
         response.put("status", "running");
         
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new ApiResponse<>(200, response, "Public info"));
     }
 }

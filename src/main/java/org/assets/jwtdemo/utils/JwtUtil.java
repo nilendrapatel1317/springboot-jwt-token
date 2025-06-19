@@ -37,7 +37,7 @@ public class JwtUtil {
                 .setClaims(claims)
                 .setSubject(subject)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 1 * 60 * 1000)) // 5 minutes
+                .setExpiration(new Date(System.currentTimeMillis() + 24 * 60 * 60 * 1000)) // 5 minutes
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -100,9 +100,12 @@ public class JwtUtil {
     }
 
     public synchronized void blacklistAllUserTokens(String username) {
+        System.out.println("Blacklisting all tokens for user: " + username);
         Set<String> tokens = userActiveTokens.get(username);
+        System.out.println(tokens);
         if (tokens != null) {
             for (String t : tokens) {
+                System.out.println(t);
                 addToBlacklist(t);
             }
             tokens.clear();
