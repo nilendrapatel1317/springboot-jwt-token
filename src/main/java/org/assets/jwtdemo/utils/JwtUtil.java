@@ -17,6 +17,7 @@ import javax.crypto.SecretKey;
 public class JwtUtil {
     private final SecretKey key;
     private final Set<String> tokenBlacklist = Collections.synchronizedSet(new HashSet<>());
+    private final Map<String, Set<String>> userActiveTokens = new HashMap<>();
 
     public JwtUtil(@Value("${jwt.secret}") String secret) {
         this.key = new SecretKeySpec(secret.getBytes(), SignatureAlgorithm.HS256.getJcaName());
@@ -88,5 +89,23 @@ public class JwtUtil {
                 return true;
             }
         });
+    }
+
+    public synchronized void storeUserToken(String username, String token) {
+        userActiveTokens.computeIfAbsent(username, k -> new HashSet<>()).add(token);
+    }
+
+    public synchronized Set<String> getUserTokens(String username) {
+        return userActiveTokens.getOrDefault(username, Collections.emptySet());
+    }
+
+    public synchronized void blacklistAllUserTokens(String username) {
+        Set<String> tokens = userActiveTokens.get(username);
+        if (tokens != null) {
+            for (String t : tokens) {
+                addToBlacklist(t);
+            }
+            tokens.clear();
+        }
     }
 }
